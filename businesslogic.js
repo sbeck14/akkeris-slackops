@@ -33,8 +33,7 @@ module.exports = function(pg) {
 
     try {
       const opts = { headers: { 'Authorization': `Bearer ${req.tokens[0].common_auth_tokens.access_token}` } };
-      const apps = await axios.get(`${process.env.AKKERIS_API}/apps`, opts);
-      console.log(apps);
+      const { data: apps } = await axios.get(`${process.env.AKKERIS_API}/apps`, opts);
       const appNames = apps.map(a => a.name);
   
       const response = {
