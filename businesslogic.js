@@ -29,18 +29,30 @@ module.exports = function(pg) {
       command + text = /aka command
     */
 
-    const apps = await axios.get(`${process.env.AKKERIS_API}/apps`);
-    const appNames = apps.map(a => a.name);
-    res.status(200).json({
-      "response_type": "in_channel",
-      "text": "Results for '/aka apps'",
-      "attachments": [
-        {
-          "text": appNames,
-          "ts": Date.now(),
-        }
-      ]
-    });
+    res.send(200);
+    res.close();
+
+    try {
+      const apps = await axios.get(`${process.env.AKKERIS_API}/apps`);
+      const appNames = apps.map(a => a.name);
+  
+      const response = {
+        "response_type": "in_channel",
+        "text": "Results for '/aka apps'",
+        "attachments": [
+          {
+            "text": appNames,
+            "ts": Date.now(),
+          }
+        ]
+      };
+      await axios.post(req.body.response_url, response);
+    } catch (err) {
+      await axios.post(req.body.response_url, {
+        "response_type": "ephemeral",
+        "text": "Sorry, that didn't work. Please try again."
+      });
+    }
     
     // res.json({
     //   "attachments": [
