@@ -47,6 +47,7 @@ module.exports = function(pg) {
       };
       await axios.post(req.body.response_url, response);
     } catch (err) {
+      console.error(err);
       await axios.post(req.body.response_url, {
         "response_type": "ephemeral",
         "text": "Sorry, that didn't work. Please try again."
