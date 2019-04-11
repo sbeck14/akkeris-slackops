@@ -38,7 +38,7 @@ async function getApps(token, replyTo) {
     //   })),
     // };
 
-    const formattedApps = apps.reduce((acc, curr) => `${acc}\n• ${curr.name}`, '');
+    const formattedApps = apps.reduce((acc, curr) => `${acc}\n• ${curr.name}`, '').split('\n');
     const chunks = chunkArray(formattedApps, 200);
 
     const response = [
@@ -57,7 +57,7 @@ async function getApps(token, replyTo) {
       "type": "section",
       "text": {
         "type": "plain_text",
-        "text": chunk,
+        "text": chunk.join('\n'),
       }
     })));
 
