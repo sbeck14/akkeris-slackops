@@ -13,8 +13,23 @@
 module.exports = function(pg) {
 
   async function do_command(req, res) {
-
-    console.log(req);
+    /*
+    Info in body:
+    channel_id
+    channel_name
+    command (slash command)
+    response_url (replyTo this?)
+    team_domain
+    team_id
+    text (params to slash command)
+    token
+    trigger_id
+    user_id
+    user_name
+    */
+    
+    console.log(req.tokens);
+    console.log(req.tokens.common_auth_tokens);
     console.log(req.body);
     
     // res.json({
@@ -32,6 +47,7 @@ module.exports = function(pg) {
     //     }
     //   ]
     // })
+
     res.sendStatus(200);
   }
 
