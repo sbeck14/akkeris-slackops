@@ -29,8 +29,7 @@ module.exports = function(pg) {
       command + text = /aka command
     */
 
-    res.send(200);
-    res.close();
+    res.status(200);
 
     try {
       const apps = await axios.get(`${process.env.AKKERIS_API}/apps`);
