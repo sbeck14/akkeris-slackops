@@ -10,27 +10,37 @@
  * In the req object passed in req.body has a mapping of key=value pairs from the slack command,
  * in addition it has req.tokens of the users linked oauth2 system response
  */
+
+ const axios = require(axios);
+
 module.exports = function(pg) {
 
   async function do_command(req, res) {
     /*
-    Info in body:
-    channel_id
-    channel_name
-    command (slash command)
-    response_url (replyTo this?)
-    team_domain
-    team_id
-    text (params to slash command)
-    token
-    trigger_id
-    user_id
-    user_name
+      req.tokens.common_auth_tokens: {
+        access_token, token_type, expires_in, refresh_token, scope
+      }
+
+      req.body: {
+        channel_id, channel_name, command, response_url, team_domain, team_id, text, token,
+        trigger_id, user_id, user_name
+      }
+
+      command + text = /aka command
     */
-    
-    console.log(req.tokens);
-    console.log(req.tokens.common_auth_tokens);
-    console.log(req.body);
+
+    const apps = await axios.get(`${process.env.AKKERIS_API}/apps`);
+    const appNames = apps.map(a => a.name);
+    res.status(200).json({
+      "response_type": "in_channel",
+      "text": "Results for '/aka apps'",
+      "attachments": [
+        {
+          "text": appNames,
+          "ts": Date.now(),
+        }
+      ]
+    });
     
     // res.json({
     //   "attachments": [
@@ -48,7 +58,7 @@ module.exports = function(pg) {
     //   ]
     // })
 
-    res.sendStatus(200);
+    // res.sendStatus(200);
   }
 
   return {
