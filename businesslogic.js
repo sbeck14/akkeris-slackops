@@ -17,11 +17,13 @@ async function getApps(token, replyTo) {
   try {
     const opts = { headers: { 'Authorization': `Bearer ${token}` } };
     const { data: apps } = await axios.get(`${process.env.AKKERIS_API}/apps`, opts);
+
     // Format app names
     const formattedApps = apps.reduce((acc, curr) => {
       acc = `${acc}\n• ${curr.name}`;
     }, `Apps (${apps.length}):`);
-    
+
+    console.log(formattedApps);
 
     const response = {
       "response_type": "in_channel",
@@ -33,13 +35,11 @@ async function getApps(token, replyTo) {
         }
       ]
     };
+
     await axios.post(replyTo, response);
   } catch (err) {
     console.error(err);
-    await axios.post(replyTo, {
-      "response_type": "ephemeral",
-      "text": "Error retrieving list of apps. Please try again later."
-    });
+    sendError(replyTo, "Error retrieving list of apps. Please try again later.");
   }
 }
 
@@ -81,6 +81,7 @@ module.exports = function(pg) {
     switch (options) {
       case 'apps': {
         getApps(token, replyTo);
+        break;
       }
       default: {
         sendError(replyTo, `Unrecognized Command: ${options}`);
