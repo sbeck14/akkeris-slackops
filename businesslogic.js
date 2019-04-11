@@ -26,22 +26,11 @@ async function getApps(token, replyTo) {
     const opts = { headers: { 'Authorization': `Bearer ${token}` } };
     const { data: apps } = await axios.get(`${process.env.AKKERIS_API}/apps`, opts);
 
-    // Apps (${apps.length}):
-    // Format app names
-    // let formattedApps = apps.reduce((acc, curr) => `${acc}\n• ${curr.name}`, '');
-
-    // const response = {
-    //   "response_type": "in_channel",
-    //   "text": "Results for '/aka apps'",
-    //   "attachments": chunkArray(formattedApps, 200).map((chunk, idx, arr) => ({
-    //     "text": `[${idx + 1} of ${arr.length}]:\n${chunk}`
-    //   })),
-    // };
-
-    const formattedApps = apps.reduce((acc, curr) => `${acc}\n• ${curr.name}`, '').split('\n');
-    const chunks = chunkArray(formattedApps, 200);
-
-    const response = [
+    const formattedApps = apps.map(a => `• ${a.name}`);
+    const chunks = chunkArray(formattedApps, 100);
+    // console.log(chunks);
+    
+    let response = [
       {
         "type": "section",
         "text": {
@@ -52,15 +41,13 @@ async function getApps(token, replyTo) {
       {
         "type": "divider"
       }
-    ];
-    response.concat(chunks.map((chunk, idx, arr) => ({
+    ].concat(chunks.map((chunk) => ({
       "type": "section",
       "text": {
         "type": "plain_text",
         "text": chunk.join('\n'),
       }
     })));
-    console.log(response);
 
     await axios.post(replyTo, response);
   } catch (err) {
