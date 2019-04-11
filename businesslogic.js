@@ -11,7 +11,7 @@
  * in addition it has req.tokens of the users linked oauth2 system response
  */
 
- const axios = require(axios);
+const axios = require('axios')
 
 module.exports = function(pg) {
 
