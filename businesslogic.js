@@ -13,6 +13,48 @@
 
 const axios = require('axios')
 
+async function getApps(token, replyTo) {
+  try {
+    const opts = { headers: { 'Authorization': `Bearer ${token}` } };
+    const { data: apps } = await axios.get(`${process.env.AKKERIS_API}/apps`, opts);
+    // Format app names
+    const formattedApps = apps.reduce((acc, curr) => {
+      acc = `${acc}\n• ${curr.name}`;
+    }, `Apps (${apps.length}):`);
+    
+
+    const response = {
+      "response_type": "in_channel",
+      "text": "Results for '/aka apps'",
+      "attachments": [
+        {
+          "text": formattedApps,
+          "ts": Date.now(),
+        }
+      ]
+    };
+    await axios.post(replyTo, response);
+  } catch (err) {
+    console.error(err);
+    await axios.post(replyTo, {
+      "response_type": "ephemeral",
+      "text": "Error retrieving list of apps. Please try again later."
+    });
+  }
+}
+
+async function sendError(replyTo, message) {
+  try {
+    await axios.post(replyTo, {
+      "response_type": "ephemeral",
+      "text": message,
+    });
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+
 module.exports = function(pg) {
 
   async function do_command(req, res) {
@@ -30,48 +72,20 @@ module.exports = function(pg) {
     */
 
     res.status(200);
+    const token = req.tokens[0].common_auth_tokens.access_token;
+    const replyTo = req.body.response_url;
 
-    try {
-      const opts = { headers: { 'Authorization': `Bearer ${req.tokens[0].common_auth_tokens.access_token}` } };
-      const { data: apps } = await axios.get(`${process.env.AKKERIS_API}/apps`, opts);
-      const appNames = apps.map(a => a.name);
-  
-      const response = {
-        "response_type": "in_channel",
-        "text": "Results for '/aka apps'",
-        "attachments": [
-          {
-            "text": JSON.stringify(appNames),
-            "ts": Date.now(),
-          }
-        ]
-      };
-      await axios.post(req.body.response_url, response);
-    } catch (err) {
-      console.error(err);
-      await axios.post(req.body.response_url, {
-        "response_type": "ephemeral",
-        "text": "Sorry, that didn't work. Please try again."
-      });
+    // Parse options
+    const options = req.body.text;
+
+    switch (options) {
+      case 'apps': {
+        getApps(token, replyTo);
+      }
+      default: {
+        sendError(replyTo, `Unrecognized Command: ${options}`);
+      }
     }
-    
-    // res.json({
-    //   "attachments": [
-    //     {
-    //       "fallback": `Run Akkeris command!`,
-    //       "color": "#36a64f",
-    //       "pretext": "Some other functionality",
-    //       "title": "Some other functionality",
-    //       "title_link": `https://asdf`,
-    //       "text": "Some other functionality",
-    //       "footer": "Your App",
-    //       "footer_icon": "https://platform.slack-edge.com/img/default_application_icon.png",
-    //       "ts": Date.now()
-    //     }
-    //   ]
-    // })
-
-    // res.sendStatus(200);
   }
 
   return {
