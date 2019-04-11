@@ -12,6 +12,7 @@ const logic = require('./businesslogic.js')(pg)
 
 const port = process.env.PORT || 9000
 const app = express()
+
 app.use(session({
   "store":new (require('connect-pg-simple')(session))({pool:pg}),
   "secret":process.env.SESSION_COOKIE_SECRET,
@@ -19,13 +20,16 @@ app.use(session({
   "saveUninitialized":true,
   "cookie": { "maxAge": 30 * 24 * 60 * 60 * 1000 }
 }))
+
 app.use (function(req, res, next) {
   req.body = Buffer.alloc(0)
   req.on('data', (chunk) => req.body = Buffer.concat([req.body, chunk]));
   req.on('end', () => next());
 });
+
 app.get('/teams/:slack_team_id/users/:slack_user_id/login', auth.oauth_start_flow)
 app.get('/auth/callback', auth.oauth_code_callback)
-app.post('/some_functionality', auth.slack_validate, logic.some_functionality)
-app.post('/some_other_functionality', auth.slack_validate, logic.some_other_functionality)
+
+app.post('/aka', auth.slack_validate, logic.do_command)
+
 app.listen(port, () => console.log(`Express is running on ${port}.`))

@@ -12,44 +12,30 @@
  */
 module.exports = function(pg) {
 
-  async function some_functionality(req, res) {
-    res.json({
-      "attachments": [
-        {
-          "fallback": `Some functionality`,
-          "color": "#36a64f",
-          "pretext": "Some other functionality",
-          "title": "Some other functionality",
-          "title_link": `https://asdf`,
-          "text": "Some other functionality",
-          "footer": "Your App",
-          "footer_icon": "https://platform.slack-edge.com/img/default_application_icon.png",
-          "ts": Date.now()
-        }
-      ]
-    })
-  }
+  async function do_command(req, res) {
 
-  async function some_other_functionality(req, res) {
-    res.json({
-      "attachments": [
-        {
-          "fallback": `Some other functionality`,
-          "color": "#36a64f",
-          "pretext": "Some other functionality",
-          "title": "Some other functionality",
-          "title_link": `https://asdf`,
-          "text": "Some other functionality",
-          "footer": "Your App",
-          "footer_icon": "https://platform.slack-edge.com/img/default_application_icon.png",
-          "ts": Date.now()
-        }
-      ]
-    })
+    console.log(req);
+    console.log(req.body);
+    
+    // res.json({
+    //   "attachments": [
+    //     {
+    //       "fallback": `Run Akkeris command!`,
+    //       "color": "#36a64f",
+    //       "pretext": "Some other functionality",
+    //       "title": "Some other functionality",
+    //       "title_link": `https://asdf`,
+    //       "text": "Some other functionality",
+    //       "footer": "Your App",
+    //       "footer_icon": "https://platform.slack-edge.com/img/default_application_icon.png",
+    //       "ts": Date.now()
+    //     }
+    //   ]
+    // })
+    res.sendStatus(200);
   }
 
   return {
-    some_functionality,
-    some_other_functionality
+    do_command
   }
 }
