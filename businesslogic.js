@@ -60,6 +60,7 @@ async function getApps(token, replyTo) {
         "text": chunk.join('\n'),
       }
     })));
+    console.log(response);
 
     await axios.post(replyTo, response);
   } catch (err) {
