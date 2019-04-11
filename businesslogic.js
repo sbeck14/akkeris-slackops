@@ -41,7 +41,7 @@ module.exports = function(pg) {
         "text": "Results for '/aka apps'",
         "attachments": [
           {
-            "text": appNames,
+            "text": JSON.stringify(appNames),
             "ts": Date.now(),
           }
         ]
