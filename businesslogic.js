@@ -46,7 +46,7 @@ async function getApps(token, replyTo) {
         "type": "section",
         "text": {
           "type": "mrkdwn",
-          "text": `*Result of* \`aka apps\` (${formattedApps.length()})`,
+          "text": `*Result of* \`aka apps\` (${formattedApps.length})`,
         }
       },
       {
