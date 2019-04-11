@@ -19,11 +19,7 @@ async function getApps(token, replyTo) {
     const { data: apps } = await axios.get(`${process.env.AKKERIS_API}/apps`, opts);
 
     // Format app names
-    const formattedApps = apps.reduce((acc, curr) => {
-      acc = `${acc}\n• ${curr.name}`;
-    }, `Apps (${apps.length}):`);
-
-    console.log(formattedApps);
+    const formattedApps = apps.reduce((acc, curr) => `${acc}\n• ${curr.name}`, `Apps (${apps.length}):`);
 
     const response = {
       "response_type": "in_channel",
