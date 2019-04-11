@@ -13,24 +13,53 @@
 
 const axios = require('axios')
 
+const chunkArray = (arr, size) => {
+  let results = [];
+  while (arr.length) {
+    results.push(myArray.splice(0, size));
+  }
+  return results;
+}
+
 async function getApps(token, replyTo) {
   try {
     const opts = { headers: { 'Authorization': `Bearer ${token}` } };
     const { data: apps } = await axios.get(`${process.env.AKKERIS_API}/apps`, opts);
 
+    // Apps (${apps.length}):
     // Format app names
-    const formattedApps = apps.reduce((acc, curr) => `${acc}\n• ${curr.name}`, `Apps (${apps.length}):`);
+    // let formattedApps = apps.reduce((acc, curr) => `${acc}\n• ${curr.name}`, '');
 
-    const response = {
-      "response_type": "in_channel",
-      "text": "Results for '/aka apps'",
-      "attachments": [
-        {
-          "text": formattedApps,
-          "ts": Date.now(),
+    // const response = {
+    //   "response_type": "in_channel",
+    //   "text": "Results for '/aka apps'",
+    //   "attachments": chunkArray(formattedApps, 200).map((chunk, idx, arr) => ({
+    //     "text": `[${idx + 1} of ${arr.length}]:\n${chunk}`
+    //   })),
+    // };
+
+    const formattedApps = apps.reduce((acc, curr) => `${acc}\n• ${curr.name}`, '');
+    const chunks = chunkArray(formattedApps, 200);
+
+    const response = [
+      {
+        "type": "section",
+        "text": {
+          "type": "mrkdwn",
+          "text": `*Result of* \`aka apps\` (${formattedApps.length()})`,
         }
-      ]
-    };
+      },
+      {
+        "type": "divider"
+      }
+    ];
+    response.concat(chunks.map((chunk, idx, arr) => ({
+      "type": "section",
+      "text": {
+        "type": "plain_text",
+        "text": chunk,
+      }
+    })));
 
     await axios.post(replyTo, response);
   } catch (err) {
