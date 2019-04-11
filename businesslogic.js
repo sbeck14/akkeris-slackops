@@ -30,7 +30,7 @@ async function getApps(token, replyTo) {
     const chunks = chunkArray(formattedApps, 100);
     // console.log(chunks);
     
-    let response = [
+    let blocks = [
       {
         "type": "section",
         "text": {
@@ -49,8 +49,7 @@ async function getApps(token, replyTo) {
       }
     })));
 
-    // await axios.post(replyTo, response);
-    await axios.post(replyTo, {"text": "test"})
+    await axios.post(replyTo, { response_type: 'in_channel', blocks})
   } catch (err) {
     console.error(err);
     sendError(replyTo, "Error retrieving list of apps. Please try again later.");
