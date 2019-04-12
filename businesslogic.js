@@ -75,6 +75,11 @@ async function sendError(replyTo, message) {
   }
 }
 
+async function isMember(channelID) {
+  const { rows: channels } = await pg.query(`select channel_id, is_member from channels`);
+  return channels.find(c => c.channel_id === channelID).is_member;
+}
+
 
 module.exports = function(pg) {
 
@@ -92,27 +97,28 @@ module.exports = function(pg) {
       command + text = /aka command
     */
 
-    const channelID = req.body.channel_id;
+    // Recieved command, regardless of whether or not it worked
+    res.status(200);
 
-    const { rows: channels } = await pg.query(`select channel_id, is_member from channels`);
-    if (!channels.find(c => c.channel_id === channelID).is_member) {
+    const channelID = req.body.channel_id;
+    if (!(await isMember(channelID))) {
       sendError(replyTo, `Please add the bot to the ${req.body.channel_name} channel.`)
-    } else {
-      res.status(200);
-      const token = req.tokens[0].common_auth_tokens.access_token;
-      const replyTo = req.body.response_url;
-  
-      // Parse options
-      const options = req.body.text;
-  
-      switch (options) {
-        case 'apps': {
-          getApps(token, channelID);
-          break;
-        }
-        default: {
-          sendError(replyTo, `Unrecognized Command: ${options}`);
-        }
+      return;
+    }
+
+    const token = req.tokens[0].common_auth_tokens.access_token;
+    const replyTo = req.body.response_url;
+
+    // Parse options
+    const options = req.body.text;
+
+    switch (options) {
+      case 'apps': {
+        getApps(token, channelID);
+        break;
+      }
+      default: {
+        sendError(replyTo, `Unrecognized Command: ${options}`);
       }
     }
   }
