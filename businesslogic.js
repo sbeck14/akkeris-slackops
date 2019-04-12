@@ -75,7 +75,7 @@ async function sendError(replyTo, message) {
   }
 }
 
-async function isMember(channelID) {
+async function isMember(pg, channelID) {
   const { rows: channels } = await pg.query(`select channel_id, is_member from channels`);
   return channels.find(c => c.channel_id === channelID).is_member;
 }
@@ -101,7 +101,7 @@ module.exports = function(pg) {
     res.status(200);
 
     const channelID = req.body.channel_id;
-    if (!(await isMember(channelID))) {
+    if (!(await isMember(pg, channelID))) {
       sendError(replyTo, `Please add the bot to the ${req.body.channel_name} channel.`)
       return;
     }
