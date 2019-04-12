@@ -13,6 +13,7 @@
 
 const axios = require('axios')
 const FormData = require('form-data');
+const ChartjsNode = require('chartjs-node');
 
 async function uploadFile(channelID, data, filename, filetype, title) {
   const form = new FormData();
@@ -46,7 +47,7 @@ async function isMember(pg, channelID) {
   return channels.find(c => c.channel_id === channelID).is_member;
 }
 
-async function getApps(token, channelID) {
+async function getApps(token, channelID, replyTo) {
   try {
     const opts = { headers: { 'Authorization': `Bearer ${token}` } };
     const { data: apps } = await axios.get(`${process.env.AKKERIS_API}/apps`, opts);
@@ -68,11 +69,13 @@ async function getApps(token, channelID) {
   }
 }
 
-async function getMetrics(token, channelID, app) {
+async function getMetrics(token, channelID, app, replyTo) {
   try {
-    const { data: metrics } = await axios.get(`${process.env.AKKERIS_API}/metrics/${app}`, {
+    const { data: metrics } = await axios.get(`${process.env.AKKERIS_API}/apps/${app}/metrics`, {
       headers: { 'Authorization': `Bearer ${token}` },
     });
+
+    const chartNode = new ChartjsNode(600, 600);
 
     console.log(metrics);
 
@@ -125,10 +128,10 @@ module.exports = function(pg) {
     // Parse options
     const options = req.body.text;
     if (req.body.text === 'apps') {
-      getApps(token, channelID);
+      getApps(token, channelID, replyTo);
     } else if (req.body.text.indexOf('metrics') > -1) {
       req.body.text.split(' ').length > 1 ? 
-        getMetrics(token, channelID, req.body.text.split(' ')[1]) : 
+        getMetrics(token, channelID, req.body.text.split(' ')[1], replyTo) : 
         sendError(replyTo, `Missing \`app\` parameter`);
     } else {
       sendError(replyTo, `Unrecognized Command: ${options}`);
