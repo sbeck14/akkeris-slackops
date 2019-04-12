@@ -14,33 +14,20 @@
 const axios = require('axios')
 const FormData = require('form-data');
 
-async function getApps(token, channelID) {
-  try {
-    const opts = { headers: { 'Authorization': `Bearer ${token}` } };
-    const { data: apps } = await axios.get(`${process.env.AKKERIS_API}/apps`, opts);
-
-    const output = apps.reduce((acc, app) => (
-      `${acc}⬢ ${app.name} ${app.preview ? '- preview' : ''}\n\tUrl: ${app.web_url}\n\t${app.git_url ? ("GitHub: " + app.git_url + ' \n\n') : '\n'}`
-    ), '');
-    
-    const data = new FormData();
-    data.append('channels', channelID);
-    data.append('content', output);
-    data.append('filename', `aka-apps_${Date.now() / 1000}.txt`);
-    data.append('filetype', 'text');
-    data.append('title', `*Result of* \`aka apps\` (${apps.length})`)
-    
-    await axios.post('https://slack.com/api/files.upload', data, {
-      headers: {
-        Authorization: `Bearer ${process.env.BOT_USER_TOKEN}`, 
-        'Content-Type': `multipart/form-data; boundary=${data._boundary}`,
-      }
-    });
-
-  } catch (err) {
-    console.error(err);
-    sendError(replyTo, "Error retrieving list of apps. Please try again later.");
-  }
+async function uploadFile(channelID, data, filename, filetype, title) {
+  const form = new FormData();
+  data.append('channels', channelID);
+  data.append('content', data);
+  data.append('filename', filename);
+  data.append('filetype', filetype);
+  data.append('title', title)
+  
+  return axios.post('https://slack.com/api/files.upload', form, {
+    headers: {
+      Authorization: `Bearer ${process.env.BOT_USER_TOKEN}`, 
+      'Content-Type': `multipart/form-data; boundary=${data._boundary}`,
+    }
+  });
 }
 
 async function sendError(replyTo, message) {
@@ -57,6 +44,28 @@ async function sendError(replyTo, message) {
 async function isMember(pg, channelID) {
   const { rows: channels } = await pg.query(`select channel_id, is_member from channels`);
   return channels.find(c => c.channel_id === channelID).is_member;
+}
+
+async function getApps(token, channelID) {
+  try {
+    const opts = { headers: { 'Authorization': `Bearer ${token}` } };
+    const { data: apps } = await axios.get(`${process.env.AKKERIS_API}/apps`, opts);
+
+    const output = apps.reduce((acc, app) => (
+      `${acc}⬢ ${app.name} ${app.preview ? '- preview' : ''}\n\tUrl: ${app.web_url}\n\t${app.git_url ? ("GitHub: " + app.git_url + ' \n\n') : '\n'}`
+    ), '');
+    
+    await uploadFile(
+      channelID,
+      output,
+      `aka-apps_${Date.now() / 1000}.txt`,
+      'text',
+      `*Result of* \`aka apps\` (${apps.length})`
+    );
+  } catch (err) {
+    console.error(err);
+    sendError(replyTo, "Error retrieving list of apps. Please try again later.");
+  }
 }
 
 
@@ -78,7 +87,9 @@ module.exports = function(pg) {
 
     // Recieved command, regardless of whether or not it worked
 
-    res.status(200).send('Working on your request...');
+    res.status(200).send({
+      response_type: 'in_channel',
+    });
 
     const channelID = req.body.channel_id;
     const replyTo = req.body.response_url;
