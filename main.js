@@ -15,6 +15,7 @@ const port = process.env.PORT || 9000
 const app = express()
 
 // Retrieve list of slack channels that we are a member of every minute
+channels.update_channels();
 setInterval(() => channels.update_channels(), 60000);
 
 app.use(session({
