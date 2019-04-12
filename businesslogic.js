@@ -12,6 +12,7 @@
  */
 
 const axios = require('axios')
+const FormData = require('form-data');
 
 const slackOpts = { 
   headers: { Authorization: `Bearer ${process.env.BOT_USER_TOKEN}`}
