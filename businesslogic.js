@@ -21,7 +21,7 @@ const chunkArray = (arr, size) => {
   return results;
 }
 
-async function getApps(token, replyTo, channel_id) {
+async function getApps(token, replyTo, channelID) {
   try {
     const opts = { headers: { 'Authorization': `Bearer ${token}` } };
     const { data: apps } = await axios.get(`${process.env.AKKERIS_API}/apps`, opts);
@@ -50,7 +50,7 @@ async function getApps(token, replyTo, channel_id) {
     })));
 
     await axios.post('https://slack.com/api/chat.postMessage', {
-      channel: channel_id,
+      channel: channelID,
       as_user: true,
       blocks,
     }, {
@@ -93,6 +93,7 @@ module.exports = function(pg) {
 
     res.status(200);
     const token = req.tokens[0].common_auth_tokens.access_token;
+    const channelID = req.body.channel_id;
     const replyTo = req.body.response_url;
 
     // Parse options
@@ -100,7 +101,7 @@ module.exports = function(pg) {
 
     switch (options) {
       case 'apps': {
-        getApps(token, replyTo, channel_id);
+        getApps(token, replyTo, channelID);
         break;
       }
       default: {
