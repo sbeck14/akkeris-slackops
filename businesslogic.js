@@ -96,18 +96,19 @@ module.exports = function(pg) {
 
       command + text = /aka command
     */
-
+µ
     // Recieved command, regardless of whether or not it worked
     res.status(200);
 
     const channelID = req.body.channel_id;
+    const replyTo = req.body.response_url;
+
     if (!(await isMember(pg, channelID))) {
       sendError(replyTo, `Please add the bot to the ${req.body.channel_name} channel.`)
       return;
     }
 
     const token = req.tokens[0].common_auth_tokens.access_token;
-    const replyTo = req.body.response_url;
 
     // Parse options
     const options = req.body.text;
