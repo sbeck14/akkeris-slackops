@@ -14,10 +14,6 @@
 const axios = require('axios')
 const FormData = require('form-data');
 
-const slackOpts = { 
-  headers: { Authorization: `Bearer ${process.env.BOT_USER_TOKEN}`}
-};
-
 async function getApps(token, channelID) {
   try {
     const opts = { headers: { 'Authorization': `Bearer ${token}` } };
@@ -25,17 +21,21 @@ async function getApps(token, channelID) {
 
     const output = apps.reduce((acc, app) => (
       `${acc}⬢ ${app.name} ${app.preview ? '- preview' : ''}\n\tUrl: ${app.web_url}\n\t${app.git_url ? ("GitHub: " + app.git_url + ' \n\n') : '\n'}`
-    ));
-
+    ), '');
+    
     const data = new FormData();
     data.append('channels', channelID);
     data.append('content', output);
     data.append('filename', `aka-apps_${Date.now() / 1000}.txt`);
     data.append('filetype', 'text');
     data.append('title', `*Result of* \`aka apps\` (${apps.length})`)
-
-    const res = await axios.post('https://slack.com/api/files.upload', data, slackOpts);
-    console.log(res.data);
+    
+    await axios.post('https://slack.com/api/files.upload', data, {
+      headers: {
+        Authorization: `Bearer ${process.env.BOT_USER_TOKEN}`, 
+        'Content-Type': `multipart/form-data; boundary=${data._boundary}`,
+      }
+    });
 
   } catch (err) {
     console.error(err);
@@ -77,7 +77,8 @@ module.exports = function(pg) {
     */
 
     // Recieved command, regardless of whether or not it worked
-    res.status(200);
+
+    res.status(200).send('Working on your request...');
 
     const channelID = req.body.channel_id;
     const replyTo = req.body.response_url;
