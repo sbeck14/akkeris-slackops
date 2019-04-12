@@ -96,7 +96,7 @@ module.exports = function(pg) {
 
       command + text = /aka command
     */
-µ
+
     // Recieved command, regardless of whether or not it worked
     res.status(200);
 
