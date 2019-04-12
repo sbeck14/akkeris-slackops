@@ -31,7 +31,7 @@ module.exports = function(pg) {
             ($1, $2, now())
           on conflict (channel_id)
           do update set
-            is_member = $2
+            is_member = $2,
             updated = now()
         `, [channel.id, channel.is_member])
       )));
