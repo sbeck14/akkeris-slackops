@@ -15,5 +15,11 @@ begin
 		created timestamp with time zone not null default now(),
 		constraint "links_pkey" PRIMARY KEY (slack_user_id, slack_team_id)
 	);
+
+	create table if not exists "channels" (
+		channel_id varchar(1024) not null,
+		is_member boolean not null,
+		updated timestamp not null default now()
+	);
 end
 $$;

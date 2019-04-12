@@ -9,9 +9,13 @@ pg.query(fs.readFileSync('./create.sql').toString('utf8')).catch((err) => consol
 
 const auth = require('./auth.js')(pg)
 const logic = require('./businesslogic.js')(pg)
+const channels = require('./channels.js')(pg)
 
 const port = process.env.PORT || 9000
 const app = express()
+
+// Retrieve list of slack channels that we are a member of every minute
+setInterval(() => channels.update_channels(), 60000);
 
 app.use(session({
   "store":new (require('connect-pg-simple')(session))({pool:pg}),
