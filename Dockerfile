@@ -9,7 +9,7 @@ WORKDIR /usr/src/app
 COPY . /usr/src/app
 
 # Install build depedencies for charts
-RUN apk add --no-cache --virtual .build-deps git build-base g++ && \
+RUN apk add --no-cache --virtual .build-deps git build-base g++ python && \
 	  apk add --no-cache --virtual .npm-deps cairo-dev libjpeg-turbo-dev pango && \
     npm install && \
     apk del .build-deps
