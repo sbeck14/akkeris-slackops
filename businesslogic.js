@@ -68,6 +68,27 @@ async function getApps(token, channelID) {
   }
 }
 
+async function getMetrics(token, channelID, app) {
+  try {
+    const { data: metrics } = await axios.get(`${process.env.AKKERIS_API}/metrics/${app}`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+
+    console.log(metrics);
+
+    // await uploadFile(
+    //   channelID,
+    //   output,
+    //   `aka-apps_${Date.now() / 1000}.txt`,
+    //   'text',
+    //   `*Result of* \`aka apps\` (${apps.length})`
+    // );
+  } catch (err) {
+    console.error(err);
+    sendError(replyTo, `Error retrieving metrics for ${app}. Please try again later.`);
+  }
+}
+
 
 module.exports = function(pg) {
 
@@ -103,16 +124,16 @@ module.exports = function(pg) {
 
     // Parse options
     const options = req.body.text;
-
-    switch (options) {
-      case 'apps': {
-        getApps(token, channelID);
-        break;
-      }
-      default: {
-        sendError(replyTo, `Unrecognized Command: ${options}`);
-      }
+    if (req.body.text === 'apps') {
+      getApps(token, channelID);
+    } else if (req.body.text.indexOf('metrics') > -1) {
+      req.body.text.split(' ').length > 1 ? 
+        getMetrics(token, channelID, app)[1] : 
+        sendError(replyTo, `Missing \`app\` parameter`);
+    } else {
+      sendError(replyTo, `Unrecognized Command: ${options}`);
     }
+
   }
 
   return {
