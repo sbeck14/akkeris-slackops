@@ -75,17 +75,49 @@ async function getMetrics(token, channelID, app, replyTo) {
       headers: { 'Authorization': `Bearer ${token}` },
     });
 
-    const chartNode = new ChartjsNode(600, 600);
+    const chartOptions = {
+      type: 'line',
+      data: {
+        labels: metrics.web.network_receive_bytes_total.keys().map(k => (new Date(k)*1000).toISOString()),
+        datasets: [{
+          label: 'Network Receive Bytes Total',
+          data: metrics.web.network_receive_bytes_total.values(),
+        }],
+      },
+      options: {
+        scales: {
+          yAxes: [{
+              ticks: {
+                beginAtZero: true
+              },
+          }],
+        },
+      },
+    };
 
-    console.log(metrics);
 
-    // await uploadFile(
-    //   channelID,
-    //   output,
-    //   `aka-apps_${Date.now() / 1000}.txt`,
-    //   'text',
-    //   `*Result of* \`aka apps\` (${apps.length})`
-    // );
+    const chartNode = new ChartjsNode(800, 600);
+    chartNode.drawChart(chartOptions)
+    .then(() => {
+      return chartNode.getImageBuffer('image/png');
+    })
+    .then((buffer) => {
+      return chartNode.getImageStream('image/png');
+    })
+    .then(async (streamResult) => {
+      const { data: resp } = await uploadFile(
+        channelID,
+        streamResult.stream,
+        `aka-metrics_${Date.now() / 1000}.png`,
+        'png',
+        `*Result of* \`aka metrics\``,
+      );
+      console.log(resp);
+      chartNode.destroy();
+    });
+
+//    console.log(metrics);
+
   } catch (err) {
     console.error(err);
     sendError(replyTo, `Error retrieving metrics for ${app}. Please try again later.`);
