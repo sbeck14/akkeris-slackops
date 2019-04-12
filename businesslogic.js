@@ -16,11 +16,11 @@ const FormData = require('form-data');
 
 async function uploadFile(channelID, data, filename, filetype, title) {
   const form = new FormData();
-  data.append('channels', channelID);
-  data.append('content', data);
-  data.append('filename', filename);
-  data.append('filetype', filetype);
-  data.append('title', title)
+  form.append('channels', channelID);
+  form.append('content', data);
+  form.append('filename', filename);
+  form.append('filetype', filetype);
+  form.append('title', title)
   
   return axios.post('https://slack.com/api/files.upload', form, {
     headers: {
