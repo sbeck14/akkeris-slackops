@@ -128,7 +128,7 @@ module.exports = function(pg) {
       getApps(token, channelID);
     } else if (req.body.text.indexOf('metrics') > -1) {
       req.body.text.split(' ').length > 1 ? 
-        getMetrics(token, channelID, app)[1] : 
+        getMetrics(token, channelID, req.body.text.split(' ')[1]) : 
         sendError(replyTo, `Missing \`app\` parameter`);
     } else {
       sendError(replyTo, `Unrecognized Command: ${options}`);
