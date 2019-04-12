@@ -17,7 +17,7 @@ begin
 	);
 
 	create table if not exists "channels" (
-		channel_id varchar(1024) not null,
+		channel_id varchar(1024) not null UNIQUE,
 		is_member boolean not null,
 		updated timestamp not null default now()
 	);
