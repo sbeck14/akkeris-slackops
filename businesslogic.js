@@ -34,7 +34,8 @@ async function getApps(token, channelID) {
     data.append('filetype', 'text');
     data.append('title', `*Result of* \`aka apps\` (${apps.length})`)
 
-    await axios.post('https://slack.com/api/files.upload', data, slackOpts);
+    const res = await axios.post('https://slack.com/api/files.upload', data, slackOpts);
+    console.log(res.data);
 
   } catch (err) {
     console.error(err);
