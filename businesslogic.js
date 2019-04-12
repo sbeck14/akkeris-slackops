@@ -21,7 +21,7 @@ const chunkArray = (arr, size) => {
   return results;
 }
 
-async function getApps(token, replyTo) {
+async function getApps(token, replyTo, channel_id) {
   try {
     const opts = { headers: { 'Authorization': `Bearer ${token}` } };
     const { data: apps } = await axios.get(`${process.env.AKKERIS_API}/apps`, opts);
@@ -35,7 +35,7 @@ async function getApps(token, replyTo) {
         "type": "section",
         "text": {
           "type": "mrkdwn",
-          "text": `*Result of* \`aka apps\` (${formattedApps.length})`,
+          "text": `*Result of* \`aka apps\` (${apps.length})`,
         }
       },
       {
@@ -49,7 +49,14 @@ async function getApps(token, replyTo) {
       }
     })));
 
-    await axios.post(replyTo, { response_type: 'in_channel', blocks})
+    await axios.post('https://slack.com/api/chat.postMessage', {
+      channel: channel_id,
+      as_user: true,
+      blocks,
+    }, {
+      headers: { Authorization: `Bearer ${process.env.BOT_USER_TOKEN}`}
+    })
+    // await axios.post(replyTo, { response_type: 'in_channel', blocks})
   } catch (err) {
     console.error(err);
     sendError(replyTo, "Error retrieving list of apps. Please try again later.");
@@ -93,7 +100,7 @@ module.exports = function(pg) {
 
     switch (options) {
       case 'apps': {
-        getApps(token, replyTo);
+        getApps(token, replyTo, channel_id);
         break;
       }
       default: {
