@@ -13,7 +13,7 @@
 
 const axios = require('axios')
 const FormData = require('form-data');
-const ChartjsNode = require('chartjs-node');
+// const ChartjsNode = require('chartjs-node');
 
 async function uploadFile(channelID, data, filename, filetype, title) {
   const form = new FormData();
