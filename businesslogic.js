@@ -13,7 +13,14 @@
 
 const axios = require('axios')
 const FormData = require('form-data');
-// const ChartjsNode = require('chartjs-node');
+
+// Regex Matches
+const r_allApps = /^(apps)|(all apps)|(list)$/i;
+const r_appName = /^(apps )*(\w+)-((\w+-?)+)$/i;
+const r_ps = /^ps(.)*$/i;
+const r_logs = /^logs(.)*$/i;
+
+
 
 // start-failure, stopping, stopped, waiting, pending, starting, probe-failure, running, app-crashed
 function state_map(ps) {
@@ -118,7 +125,10 @@ async function getApps(meta) {
   }
 }
 
-async function getAppInfo(meta, appName) {
+async function getAppInfo(meta, input) {
+  const parse = input.match(r_appName);
+  const appName = parse[2];
+
   try {
     const opts = { headers: { 'Authorization': `Bearer ${meta.token}` } };
     const { data: app } = await axios.get(`${process.env.AKKERIS_API}/apps/${appName}`, opts);
@@ -133,8 +143,8 @@ async function getAppInfo(meta, appName) {
         if(d.updated_at === '0001-01-01T00:00:00Z') {
           d.updated_at = 'unknown';
         } else {
-          d.updated_at = new Date(dyno.updated_at);
-          d.updated_at = dyno.updated_at.toLocaleString();
+          d.updated_at = new Date(d.updated_at);
+          d.updated_at = d.updated_at.toLocaleString();
         }
         return format_dyno(d);
       });
@@ -184,18 +194,6 @@ async function getAppInfo(meta, appName) {
   }
 }
 
-async function appsCommand(meta, options) {
-  console.log(`appsCommand requested by ${meta.userName} with options ${options.join(' ')}`)
-
-  if (options.length === 0) {
-    getApps(meta);
-  } else if (options.length === 2 && options[0] === "info") {
-    getAppInfo(meta, options[1]);
-  } else {
-    sendError(meta.replyTo, `Invalid argument(s) for /aka apps.\nUsage: /aka apps [info APPNAME]`);
-  }
-}
-
 async function psCommand(meta, options) {
   console.log(`psCommand requested by ${meta.userName}`)
   sendError(meta.replyTo, `Not implemented. Options: ${options}`);
@@ -239,29 +237,18 @@ module.exports = function(pg) {
       return;
     }
 
-    // Parse options
+    const input = req.body.text.trim();
 
-    const input = req.body.text.split(' ');
-    if (input.length === 0) {
-      // invalid input
-      sendError(meta.replyTo, 'Invalid Input');
-    }
-
-    const [command, ...options] = input;
-
-    switch(command) {
-      case "apps":
-        appsCommand(meta, options);
-        break;
-      case "ps":
-        psCommand(meta, options);
-        break;
-      case "logs":
-        logsCommand(meta, options);
-        break;
-      default:
-        sendError(meta.replyTo, `Unrecognized Command: ${command}`);
-        break;
+    if (r_allApps.test(input)) {
+      getApps(meta);
+    } else if (r_appName.test(input)) {
+      getAppInfo(meta, input)
+    } else if (r_ps.test(input)) {
+      psCommand(meta, input);
+    } else if (r_logs.test(input)) {
+      logsCommand(meta, input);
+    } else {
+      sendError(meta.replyTo, `Unrecognized Command: ${input}`);
     }
   }
 
