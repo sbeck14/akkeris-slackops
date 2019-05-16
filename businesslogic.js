@@ -16,7 +16,7 @@ const FormData = require('form-data');
 
 // Regex Matches
 const r_allApps = /^((apps)|(all apps)|(list))$/i;
-const r_appName = /^((apps)|(apps info))\s?((\w+)-((\w+-?)+))$/i;
+const r_appName = /^((apps)|(apps:info))?\s?((\w+)-((\w+-?)+))$/i;
 const r_ps = /^ps(.)*$/i;
 const r_logs = /^logs(.)*$/i;
 
@@ -177,14 +177,7 @@ async function getAppInfo(meta, input) {
       {
         "type": "section",
         "text": {
-          "text": `*Git Repo*\n${app.git_url}#${app.git_branch}`,
-          "type": "mrkdwn",
-        }
-      },
-      {
-        "type": "section",
-        "text": {
-          "text": `*Current Image*\n${app.image}`,
+          "text": `*Git Repo*\t${app.git_url}#${app.git_branch}`,
           "type": "mrkdwn",
         }
       },
