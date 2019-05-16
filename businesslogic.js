@@ -47,9 +47,9 @@ async function isMember(pg, channelID) {
   return channels.find(c => c.channel_id === channelID).is_member;
 }
 
-async function getApps(token, channelID, replyTo) {
+async function getApps(meta) {
   try {
-    const opts = { headers: { 'Authorization': `Bearer ${token}` } };
+    const opts = { headers: { 'Authorization': `Bearer ${meta.token}` } };
     const { data: apps } = await axios.get(`${process.env.AKKERIS_API}/apps`, opts);
 
     const output = apps.reduce((acc, app) => (
@@ -57,7 +57,7 @@ async function getApps(token, channelID, replyTo) {
     ), '');
     
     await uploadFile(
-      channelID,
+      meta.channelID,
       output,
       `aka-apps_${Date.now() / 1000}.txt`,
       'text',
@@ -65,64 +65,72 @@ async function getApps(token, channelID, replyTo) {
     );
   } catch (err) {
     console.error(err);
-    sendError(replyTo, "Error retrieving list of apps. Please try again later.");
+    sendError(meta.replyTo, "Error retrieving list of apps. Please try again later.");
   }
 }
 
-async function getMetrics(token, channelID, app, replyTo) {
-  try {
-    const { data: metrics } = await axios.get(`${process.env.AKKERIS_API}/apps/${app}/metrics`, {
-      headers: { 'Authorization': `Bearer ${token}` },
-    });
-
-    const chartOptions = {
-      type: 'line',
-      data: {
-        labels: metrics.web.network_receive_bytes_total.keys().map(k => (new Date(k)*1000).toISOString()),
-        datasets: [{
-          label: 'Network Receive Bytes Total',
-          data: metrics.web.network_receive_bytes_total.values(),
-        }],
-      },
-      options: {
-        scales: {
-          yAxes: [{
-              ticks: {
-                beginAtZero: true
-              },
-          }],
-        },
-      },
-    };
-
-
-    const chartNode = new ChartjsNode(800, 600);
-    chartNode.drawChart(chartOptions)
-    .then(() => {
-      return chartNode.getImageBuffer('image/png');
-    })
-    .then((buffer) => {
-      return chartNode.getImageStream('image/png');
-    })
-    .then(async (streamResult) => {
-      const { data: resp } = await uploadFile(
-        channelID,
-        streamResult.stream,
-        `aka-metrics_${Date.now() / 1000}.png`,
-        'png',
-        `*Result of* \`aka metrics\``,
-      );
-      console.log(resp);
-      chartNode.destroy();
-    });
-
-//    console.log(metrics);
-
-  } catch (err) {
-    console.error(err);
-    sendError(replyTo, `Error retrieving metrics for ${app}. Please try again later.`);
-  }
+async function getAppInfo(meta, options) {
+  sendError(meta.replyTo, `Not implemented. Options: ${options}`);
 }
+
+async function getLogs(meta, options) {
+  sendError(meta.replyTo, `Not implemented. Options: ${options}`);
+}
+
+// async function getMetrics(token, channelID, app, replyTo) {
+//   try {
+//     const { data: metrics } = await axios.get(`${process.env.AKKERIS_API}/apps/${app}/metrics`, {
+//       headers: { 'Authorization': `Bearer ${token}` },
+//     });
+
+//     const chartOptions = {
+//       type: 'line',
+//       data: {
+//         labels: metrics.web.network_receive_bytes_total.keys().map(k => (new Date(k)*1000).toISOString()),
+//         datasets: [{
+//           label: 'Network Receive Bytes Total',
+//           data: metrics.web.network_receive_bytes_total.values(),
+//         }],
+//       },
+//       options: {
+//         scales: {
+//           yAxes: [{
+//               ticks: {
+//                 beginAtZero: true
+//               },
+//           }],
+//         },
+//       },
+//     };
+
+
+//     const chartNode = new ChartjsNode(800, 600);
+//     chartNode.drawChart(chartOptions)
+//     .then(() => {
+//       return chartNode.getImageBuffer('image/png');
+//     })
+//     .then((buffer) => {
+//       return chartNode.getImageStream('image/png');
+//     })
+//     .then(async (streamResult) => {
+//       const { data: resp } = await uploadFile(
+//         channelID,
+//         streamResult.stream,
+//         `aka-metrics_${Date.now() / 1000}.png`,
+//         'png',
+//         `*Result of* \`aka metrics\``,
+//       );
+//       console.log(resp);
+//       chartNode.destroy();
+//     });
+
+// //    console.log(metrics);
+
+//   } catch (err) {
+//     console.error(err);
+//     sendError(replyTo, `Error retrieving metrics for ${app}. Please try again later.`);
+//   }
+// }
 
 
 module.exports = function(pg) {
@@ -137,38 +145,49 @@ module.exports = function(pg) {
         channel_id, channel_name, command, response_url, team_domain, team_id, text, token,
         trigger_id, user_id, user_name
       }
-
-      command + text = /aka command
     */
 
     // Recieved command, regardless of whether or not it worked
-
     res.status(200).send({
       response_type: 'in_channel',
     });
 
-    const channelID = req.body.channel_id;
-    const replyTo = req.body.response_url;
+    const meta = {
+      channelID: req.body.channel_id,
+      channelName: req.body.channel_name,
+      replyTo: req.body.response_url,
+      token: req.tokens[0].common_auth_tokens.access_token,
+    };
 
-    if (!(await isMember(pg, channelID))) {
-      sendError(replyTo, `Please add the bot to the ${req.body.channel_name} channel.`)
+    if (!(await isMember(pg, meta.channelID))) {
+      sendError(meta.replyTo, `Please add the bot to the ${meta.channelName} channel.`)
       return;
     }
 
-    const token = req.tokens[0].common_auth_tokens.access_token;
-
     // Parse options
-    const options = req.body.text;
-    if (req.body.text === 'apps') {
-      getApps(token, channelID, replyTo);
-    } else if (req.body.text.indexOf('metrics') > -1) {
-      req.body.text.split(' ').length > 1 ? 
-        getMetrics(token, channelID, req.body.text.split(' ')[1], replyTo) : 
-        sendError(replyTo, `Missing \`app\` parameter`);
-    } else {
-      sendError(replyTo, `Unrecognized Command: ${options}`);
+
+    const input = req.body.text.split(' ');
+    if (input.length === 0) {
+      // invalid input
+      sendError(meta.replyTo, 'Invalid Input');
     }
 
+    const [command, ...options] = input;
+
+    switch(command) {
+      case "apps":
+        getApps(meta);
+        break;
+      case "ps":
+        getAppInfo(meta, options);
+        break;
+      case "logs":
+        getLogs(meta, options);
+        break;
+      default:
+        sendError(meta.replyTo, `Unrecognized Command: ${command}`);
+        break;
+    }
   }
 
   return {

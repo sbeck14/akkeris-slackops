@@ -3,3 +3,4 @@
 .env-qa
 node_modules
 *.env
+.DS_STORE
