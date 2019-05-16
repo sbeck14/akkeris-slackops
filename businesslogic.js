@@ -143,17 +143,16 @@ async function getAppInfo(meta, input) {
         if(d.updated_at === '0001-01-01T00:00:00Z') {
           d.updated_at = 'unknown';
         } else {
-          d.updated_at = new Date(d.updated_at);
-          d.updated_at = d.updated_at.toLocaleString();
+          d.updated_at = new Date(d.updated_at).toLocaleString(meta.locale, { timeZone: meta.tz });
         }
         return format_dyno(d);
       });
       if (!warn) {
         warn = f_dynos.some(x => x.warning);
       }
-      formation_info = `${formation_info}${f.type} (${f.quantity}x ${f.size}): ${warn ? ":warning:" : ''}\n`;
+      formation_info = `${formation_info}${f.type} [${f.quantity}] (${f.size}): ${warn ? ":warning:" : ''}\n`;
       f_dynos.forEach(d => {
-        formation_info = `${formation_info}\t- ${d.dyno_name}:${d.spacing}${d.state} (${d.updated_at})\n`
+        formation_info = `${formation_info}\t- ${d.warning ? ":warning: " : ''}${d.dyno_name}:${d.spacing}${d.state} (${d.updated_at})\n`
       })
     });
 
@@ -189,7 +188,7 @@ async function getAppInfo(meta, input) {
         "elements": [
           {
             "type": "mrkdwn",
-            "text": `Last Release: ${new Date(app.released_at).toLocaleString()}\nMore Info: ${ui_url}`
+            "text": `Last Release: ${new Date(app.released_at).toLocaleString(meta.locale, { timeZone: meta.tz })}\nMore Info: ${ui_url}`
           }
         ]
       }
@@ -235,12 +234,17 @@ module.exports = function(pg) {
       response_type: 'in_channel',
     });
 
+    // get time zone
+    const { user: { tz, locale } } = await axios.get(`https://slack.com/api/users.info?token=${process.env.BOT_USER_TOKEN}&user=${req.body.user_id}&locale=true`);
+
     const meta = {
       channelID: req.body.channel_id,
       channelName: req.body.channel_name,
       replyTo: req.body.response_url,
       token: req.tokens[0].common_auth_tokens.access_token,
       userName: req.body.user_name,
+      tz,
+      locale,
     };
 
     if (!(await isMember(pg, meta.channelID))) {
