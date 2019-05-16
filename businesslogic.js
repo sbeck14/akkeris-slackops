@@ -47,7 +47,8 @@ async function isMember(pg, channelID) {
   return channels.find(c => c.channel_id === channelID).is_member;
 }
 
-async function getApps(meta) {
+async function appsCommand(meta) {
+  console.log(`appsCommand requested by ${meta.userName}`)
   try {
     const opts = { headers: { 'Authorization': `Bearer ${meta.token}` } };
     const { data: apps } = await axios.get(`${process.env.AKKERIS_API}/apps`, opts);
@@ -56,24 +57,29 @@ async function getApps(meta) {
       `${acc}⬢ ${app.name} ${app.preview ? '- preview' : ''}\n\tUrl: ${app.web_url}\n\t${app.git_url ? ("GitHub: " + app.git_url + ' \n\n') : '\n'}`
     ), '');
     
-    await uploadFile(
+    const res = await uploadFile(
       meta.channelID,
       output,
       `aka-apps_${Date.now() / 1000}.txt`,
       'text',
       `*Result of* \`aka apps\` (${apps.length})`
     );
+
+    console.log('File upload completed.');
+    console.log(res);
   } catch (err) {
     console.error(err);
     sendError(meta.replyTo, "Error retrieving list of apps. Please try again later.");
   }
 }
 
-async function getAppInfo(meta, options) {
+async function psCommand(meta, options) {
+  console.log(`psCommand requested by ${meta.userName}`)
   sendError(meta.replyTo, `Not implemented. Options: ${options}`);
 }
 
-async function getLogs(meta, options) {
+async function logsCommand(meta, options) {
+  console.log(`logsCommand requested by ${meta.userName}`)
   sendError(meta.replyTo, `Not implemented. Options: ${options}`);
 }
 
@@ -157,6 +163,7 @@ module.exports = function(pg) {
       channelName: req.body.channel_name,
       replyTo: req.body.response_url,
       token: req.tokens[0].common_auth_tokens.access_token,
+      userName: req.body.user_name,
     };
 
     if (!(await isMember(pg, meta.channelID))) {
@@ -176,13 +183,13 @@ module.exports = function(pg) {
 
     switch(command) {
       case "apps":
-        getApps(meta);
+        appsCommand(meta);
         break;
       case "ps":
-        getAppInfo(meta, options);
+        psCommand(meta, options);
         break;
       case "logs":
-        getLogs(meta, options);
+        logsCommand(meta, options);
         break;
       default:
         sendError(meta.replyTo, `Unrecognized Command: ${command}`);
