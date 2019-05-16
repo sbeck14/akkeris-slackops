@@ -15,6 +15,52 @@ const axios = require('axios')
 const FormData = require('form-data');
 // const ChartjsNode = require('chartjs-node');
 
+// start-failure, stopping, stopped, waiting, pending, starting, probe-failure, running, app-crashed
+function state_map(ps) {
+  switch(ps.state.toLowerCase()) {
+    case 'start-failure':
+      return {
+        "state":"crashed",
+        "warning": true,
+      }
+    case 'app-crashed':
+      return {
+        "state":"crashed", 
+        "warning": true,
+      }
+    case 'waiting':
+      return {
+        "state":"starting",
+      }
+    case 'probe-failure':
+      let started = new Date(Date.parse(ps.created_at))
+      let now = new Date()
+      if((now.getTime() - started.getTime()) > 1000 * 90) {
+        return {
+          "state":"unhealthy", 
+          "warning": true,
+        }
+      } else {
+        return {
+          "state":"starting", 
+        }
+
+      }
+    default:
+      return {
+        "state":ps.state.toLowerCase(),
+      }
+  }
+}
+
+function format_dyno(ps) {
+  let info = state_map(ps)
+  info.dyno_name = `${ps.type}.${ps.name}`;
+  info.spacing  = (dyno_name.length > 30) ? "  " : (" ".repeat(32 - (dyno_name.length + 2)));
+  info.updated_at = ps.updated_at;
+  return info;
+}
+
 async function uploadFile(channelID, data, filename, filetype, title) {
   const form = new FormData();
   form.append('channels', channelID);
@@ -47,8 +93,7 @@ async function isMember(pg, channelID) {
   return channels.find(c => c.channel_id === channelID).is_member;
 }
 
-async function appsCommand(meta) {
-  console.log(`appsCommand requested by ${meta.userName}`)
+async function getApps(meta) {
   try {
     const opts = { headers: { 'Authorization': `Bearer ${meta.token}` } };
     const { data: apps } = await axios.get(`${process.env.AKKERIS_API}/apps`, opts);
@@ -73,6 +118,84 @@ async function appsCommand(meta) {
   }
 }
 
+async function getAppInfo(meta, appName) {
+  try {
+    const opts = { headers: { 'Authorization': `Bearer ${meta.token}` } };
+    const { data: app } = await axios.get(`${process.env.AKKERIS_API}/apps/${appName}`, opts);
+    const { data: formations } = await axios.get(`${process.env.AKKERIS_API}/apps/${appName}/formation`, opts);
+    const { data: dynos } = await axios.get(`${process.env.AKKERIS_API}/apps/${appName}/dynos`, opts);
+
+    let formation_info = '';
+    let warn = false;
+
+    formations.forEach((f) => {
+      const f_dynos = dynos.filter(x => x.type === f.type).map((d) => {
+        if(d.updated_at === '0001-01-01T00:00:00Z') {
+          d.updated_at = 'unknown';
+        } else {
+          d.updated_at = new Date(dyno.updated_at);
+          d.updated_at = dyno.updated_at.toLocaleString();
+        }
+        return format_dyno(d);
+      });
+      if (!warn) {
+        warn = f_dynos.some(x => x.warning);
+      }
+      formation_info = `${formation_info}[${f.quantity}] ${f.type} (${f.size}): ${warn && ":warning:"}\n`;
+      f_dynos.forEach(d => {
+        formation_info = `${formation_info}${d.dyno_name}:${d.spacing}${d.info.state} (${d.updated_at})\n`
+      })
+    });
+
+
+    const message = [
+      {
+        "type": "section",
+        "text": {
+          "text": `Info for *${appName}*`,
+          "type": "mrkdwn",
+        }
+      },
+      {
+        "type": "section",
+        "text": {
+          "text": `*Dynos* ${warn && ":warning:"}\n${formation_info}`,
+          "type": "mrkdwn",
+        }
+      },
+      {
+        "type": "section",
+        "text": {
+          "text": `*Git Repo*\n${app.git_url} (${app.git_branch})`,
+          "type": "mrkdwn",
+        }
+      },
+    ]
+
+    console.log(message);
+
+    await axios.post(meta.replyTo, {
+      "response_type": "in_channel",
+      "blocks": message,
+    })
+  } catch (err) {
+    console.error(err);
+    sendError(meta.replyTo, "Error retrieving app info. Please try again later.");
+  }
+}
+
+async function appsCommand(meta, options) {
+  console.log(`appsCommand requested by ${meta.userName} with options ${options.join(' ')}`)
+
+  if (options.length === 0) {
+    getApps(meta);
+  } else if (options.length === 1) {
+    getAppInfo(meta, options[0]);
+  } else {
+    sendError(meta.replyTo, `Too many arguments to /aka apps. [${options.join(' ')}]`);
+  }
+}
+
 async function psCommand(meta, options) {
   console.log(`psCommand requested by ${meta.userName}`)
   sendError(meta.replyTo, `Not implemented. Options: ${options}`);
@@ -82,61 +205,6 @@ async function logsCommand(meta, options) {
   console.log(`logsCommand requested by ${meta.userName}`)
   sendError(meta.replyTo, `Not implemented. Options: ${options}`);
 }
-
-// async function getMetrics(token, channelID, app, replyTo) {
-//   try {
-//     const { data: metrics } = await axios.get(`${process.env.AKKERIS_API}/apps/${app}/metrics`, {
-//       headers: { 'Authorization': `Bearer ${token}` },
-//     });
-
-//     const chartOptions = {
-//       type: 'line',
-//       data: {
-//         labels: metrics.web.network_receive_bytes_total.keys().map(k => (new Date(k)*1000).toISOString()),
-//         datasets: [{
-//           label: 'Network Receive Bytes Total',
-//           data: metrics.web.network_receive_bytes_total.values(),
-//         }],
-//       },
-//       options: {
-//         scales: {
-//           yAxes: [{
-//               ticks: {
-//                 beginAtZero: true
-//               },
-//           }],
-//         },
-//       },
-//     };
-
-
-//     const chartNode = new ChartjsNode(800, 600);
-//     chartNode.drawChart(chartOptions)
-//     .then(() => {
-//       return chartNode.getImageBuffer('image/png');
-//     })
-//     .then((buffer) => {
-//       return chartNode.getImageStream('image/png');
-//     })
-//     .then(async (streamResult) => {
-//       const { data: resp } = await uploadFile(
-//         channelID,
-//         streamResult.stream,
-//         `aka-metrics_${Date.now() / 1000}.png`,
-//         'png',
-//         `*Result of* \`aka metrics\``,
-//       );
-//       console.log(resp);
-//       chartNode.destroy();
-//     });
-
-// //    console.log(metrics);
-
-//   } catch (err) {
-//     console.error(err);
-//     sendError(replyTo, `Error retrieving metrics for ${app}. Please try again later.`);
-//   }
-// }
 
 
 module.exports = function(pg) {
@@ -183,7 +251,7 @@ module.exports = function(pg) {
 
     switch(command) {
       case "apps":
-        appsCommand(meta);
+        appsCommand(meta, options);
         break;
       case "ps":
         psCommand(meta, options);
