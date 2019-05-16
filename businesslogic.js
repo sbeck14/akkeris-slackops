@@ -189,8 +189,8 @@ async function appsCommand(meta, options) {
 
   if (options.length === 0) {
     getApps(meta);
-  } else if (options.length === 2) {
-    getAppInfo(meta, options[0]);
+  } else if (options.length === 2 && options[0] === "info") {
+    getAppInfo(meta, options[1]);
   } else {
     sendError(meta.replyTo, `Invalid argument(s) for /aka apps.\nUsage: /aka apps [info APPNAME]`);
   }
