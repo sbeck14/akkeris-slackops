@@ -26,7 +26,7 @@ async function uploadFile(channelID, data, filename, filetype, title) {
   return axios.post('https://slack.com/api/files.upload', form, {
     headers: {
       Authorization: `Bearer ${process.env.BOT_USER_TOKEN}`, 
-      'Content-Type': `multipart/form-data; boundary=${data._boundary}`,
+      ...form.getHeaders(),
     }
   });
 }
@@ -56,8 +56,6 @@ async function appsCommand(meta) {
     const output = apps.reduce((acc, app) => (
       `${acc}⬢ ${app.name} ${app.preview ? '- preview' : ''}\n\tUrl: ${app.web_url}\n\t${app.git_url ? ("GitHub: " + app.git_url + ' \n\n') : '\n'}`
     ), '');
-
-    console.log(apps[0]);
     
     const res = await uploadFile(
       meta.channelID,
@@ -66,9 +64,9 @@ async function appsCommand(meta) {
       'text',
       `*Result of* \`aka apps\` (${apps.length})`
     );
-
-    console.log('File upload completed.');
-    console.log(res);
+    if (res.data.ok === false) {
+      throw new Error(res.data.error);
+    }
   } catch (err) {
     console.error(err);
     sendError(meta.replyTo, "Error retrieving list of apps. Please try again later.");
@@ -172,8 +170,6 @@ module.exports = function(pg) {
       sendError(meta.replyTo, `Please add the bot to the ${meta.channelName} channel.`)
       return;
     }
-
-    console.log(meta.token)
 
     // Parse options
 
