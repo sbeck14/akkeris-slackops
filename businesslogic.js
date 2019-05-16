@@ -15,8 +15,8 @@ const axios = require('axios')
 const FormData = require('form-data');
 
 // Regex Matches
-const r_allApps = /^(apps)|(all apps)|(list)$/i;
-const r_appName = /^(apps )*((\w+)-((\w+-?)+))$/i;
+const r_allApps = /^((apps)|(all apps)|(list))$/i;
+const r_appName = /^((apps)|(apps info))\s?((\w+)-((\w+-?)+))$/i;
 const r_ps = /^ps(.)*$/i;
 const r_logs = /^logs(.)*$/i;
 
@@ -127,7 +127,7 @@ async function getApps(meta) {
 
 async function getAppInfo(meta, input) {
   const parse = input.match(r_appName);
-  const appName = parse[2];
+  const appName = parse[4];
 
   try {
     const opts = { headers: { 'Authorization': `Bearer ${meta.token}` } };
@@ -201,8 +201,6 @@ async function getAppInfo(meta, input) {
         ]
       }
     ]
-
-    console.log(message);
 
     await axios.post(meta.replyTo, {
       "response_type": "in_channel",
