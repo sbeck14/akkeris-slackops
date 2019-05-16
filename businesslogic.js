@@ -151,11 +151,13 @@ async function getAppInfo(meta, input) {
       if (!warn) {
         warn = f_dynos.some(x => x.warning);
       }
-      formation_info = `${formation_info}[${f.quantity}] ${f.type} (${f.size}): ${warn ? ":warning:" : ''}\n`;
+      formation_info = `${formation_info}${f.type} (${f.quantity}x ${f.size}): ${warn ? ":warning:" : ''}\n`;
       f_dynos.forEach(d => {
-        formation_info = `${formation_info}${d.dyno_name}:${d.spacing}${d.state} (${d.updated_at})\n`
+        formation_info = `${formation_info}\t- ${d.dyno_name}:${d.spacing}${d.state} (${d.updated_at})\n`
       })
     });
+
+    const ui_url = `${process.env.AKKERIS_UI}/apps/${appName}/info`;
 
     const message = [
       {
@@ -175,7 +177,14 @@ async function getAppInfo(meta, input) {
       {
         "type": "section",
         "text": {
-          "text": `*Git Repo*\n${app.git_url} (${app.git_branch})`,
+          "text": `*Git Repo*\n${app.git_url}#${app.git_branch}`,
+          "type": "mrkdwn",
+        }
+      },
+      {
+        "type": "section",
+        "text": {
+          "text": `*Current Image*\n${app.image}`,
           "type": "mrkdwn",
         }
       },
@@ -187,7 +196,7 @@ async function getAppInfo(meta, input) {
         "elements": [
           {
             "type": "mrkdwn",
-            "text": `Last Release: ${new Date(app.released_at).toLocaleString()}`
+            "text": `Last Release: ${new Date(app.released_at).toLocaleString()}\nMore Info: ${ui_url}`
           }
         ]
       }
