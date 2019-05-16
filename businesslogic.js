@@ -128,6 +128,10 @@ async function getApps(meta) {
 async function getAppInfo(meta, input) {
   const parse = input.match(r_appName);
   const appName = parse[2];
+  console.log(`Input: ${input}`);
+  console.log(`Parse: ${parse.join(',')}`);
+  console.log(`App Name: ${appName}`);
+  
 
   try {
     const opts = { headers: { 'Authorization': `Bearer ${meta.token}` } };
