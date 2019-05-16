@@ -16,7 +16,7 @@ const FormData = require('form-data');
 
 // Regex Matches
 const r_allApps = /^(apps)|(all apps)|(list)$/i;
-const r_appName = /^(apps )*(\w+)-((\w+-?)+)$/i;
+const r_appName = /^(apps )*((\w+)-((\w+-?)+))$/i;
 const r_ps = /^ps(.)*$/i;
 const r_logs = /^logs(.)*$/i;
 
