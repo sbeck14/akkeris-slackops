@@ -56,6 +56,8 @@ async function appsCommand(meta) {
     const output = apps.reduce((acc, app) => (
       `${acc}⬢ ${app.name} ${app.preview ? '- preview' : ''}\n\tUrl: ${app.web_url}\n\t${app.git_url ? ("GitHub: " + app.git_url + ' \n\n') : '\n'}`
     ), '');
+
+    console.log(apps[0]);
     
     const res = await uploadFile(
       meta.channelID,
@@ -170,6 +172,8 @@ module.exports = function(pg) {
       sendError(meta.replyTo, `Please add the bot to the ${meta.channelName} channel.`)
       return;
     }
+
+    console.log(meta.token)
 
     // Parse options
 
