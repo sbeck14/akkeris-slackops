@@ -63,7 +63,7 @@ function state_map(ps) {
 function format_dyno(ps) {
   let info = state_map(ps)
   info.dyno_name = `${ps.type}.${ps.name}`;
-  info.spacing  = (info.dyno_name.length > 30) ? "  " : (" ".repeat(32 - (info.dyno_name.length + 2)));
+  info.spacing  = (info.dyno_name.length > 26) ? "  " : (" ".repeat(28 - (info.dyno_name.length + 2)));
   info.updated_at = ps.updated_at;
   return info;
 }
@@ -151,12 +151,11 @@ async function getAppInfo(meta, input) {
       if (!warn) {
         warn = f_dynos.some(x => x.warning);
       }
-      formation_info = `${formation_info}[${f.quantity}] ${f.type} (${f.size}): ${warn && ":warning:"}\n`;
+      formation_info = `${formation_info}[${f.quantity}] ${f.type} (${f.size}): ${warn ? ":warning:" : ''}\n`;
       f_dynos.forEach(d => {
         formation_info = `${formation_info}${d.dyno_name}:${d.spacing}${d.state} (${d.updated_at})\n`
       })
     });
-
 
     const message = [
       {
@@ -169,7 +168,7 @@ async function getAppInfo(meta, input) {
       {
         "type": "section",
         "text": {
-          "text": `*Dynos* ${warn && ":warning:"}\n${formation_info}`,
+          "text": `*Dynos* ${warn ? ":warning:" : ''}\n${formation_info}`,
           "type": "mrkdwn",
         }
       },
@@ -180,6 +179,18 @@ async function getAppInfo(meta, input) {
           "type": "mrkdwn",
         }
       },
+      {
+        "type": "divider",
+      },
+      {
+        "type": "context",
+        "elements": [
+          {
+            "type": "mrkdwn",
+            "text": `Last Release: ${new Date(app.released_at).toLocaleString()}`
+          }
+        ]
+      }
     ]
 
     console.log(message);
