@@ -153,7 +153,7 @@ async function getAppInfo(meta, input) {
       }
       formation_info = `${formation_info}[${f.quantity}] ${f.type} (${f.size}): ${warn && ":warning:"}\n`;
       f_dynos.forEach(d => {
-        formation_info = `${formation_info}${d.dyno_name}:${d.spacing}${d.info.state} (${d.updated_at})\n`
+        formation_info = `${formation_info}${d.dyno_name}:${d.spacing}${d.state} (${d.updated_at})\n`
       })
     });
 
