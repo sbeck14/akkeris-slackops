@@ -63,7 +63,7 @@ function state_map(ps) {
 function format_dyno(ps) {
   let info = state_map(ps)
   info.dyno_name = `${ps.type}.${ps.name}`;
-  info.spacing  = (dyno_name.length > 30) ? "  " : (" ".repeat(32 - (dyno_name.length + 2)));
+  info.spacing  = (info.dyno_name.length > 30) ? "  " : (" ".repeat(32 - (info.dyno_name.length + 2)));
   info.updated_at = ps.updated_at;
   return info;
 }
@@ -128,10 +128,6 @@ async function getApps(meta) {
 async function getAppInfo(meta, input) {
   const parse = input.match(r_appName);
   const appName = parse[2];
-  console.log(`Input: ${input}`);
-  console.log(`Parse: ${parse.join(',')}`);
-  console.log(`App Name: ${appName}`);
-  
 
   try {
     const opts = { headers: { 'Authorization': `Bearer ${meta.token}` } };
