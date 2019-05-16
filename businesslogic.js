@@ -170,14 +170,14 @@ async function getAppInfo(meta, input) {
       {
         "type": "section",
         "text": {
-          "text": `*Dynos* ${warn ? ":warning:" : ''}\n${formation_info}`,
+          "text": `:cpu: *Dynos* ${warn ? ":warning:" : ''}\n${formation_info}`,
           "type": "mrkdwn",
         }
       },
       {
         "type": "section",
         "text": {
-          "text": `*Git Repo*\t${app.git_url}#${app.git_branch}`,
+          "text": `:github: *Git Repo*\t${app.git_url}#${app.git_branch}`,
           "type": "mrkdwn",
         }
       },
