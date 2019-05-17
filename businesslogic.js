@@ -327,8 +327,17 @@ module.exports = function(pg) {
     }
   }
 
+  async function interact(req, res) {
+    res.status(200).send({
+      response_type: 'in_channel',
+    });
+
+    console.log(req.body.payload);
+  }
+
   return {
-    do_command
+    do_command,
+    interact
   }
 }
 

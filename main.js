@@ -36,5 +36,6 @@ app.get('/teams/:slack_team_id/users/:slack_user_id/login', auth.oauth_start_flo
 app.get('/auth/callback', auth.oauth_code_callback)
 
 app.post('/aka', auth.slack_validate, logic.do_command)
+app.post('/interact', auth.slack_validate, logic.interact)
 
 app.listen(port, () => console.log(`Express is running on ${port}.`))
