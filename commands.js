@@ -10,6 +10,20 @@
  * In the req object passed in req.body has a mapping of key=value pairs from the slack command,
  * in addition it has req.tokens of the users linked oauth2 system response
  */
+
+/*
+  --Contents of req.tokens.common_auth_tokens and req.body--
+
+  req.tokens.common_auth_tokens: {
+    access_token, token_type, expires_in, refresh_token, scope
+  }
+
+  req.body: {
+    channel_id, channel_name, command, response_url, team_domain, team_id, text, token,
+    trigger_id, user_id, user_name
+  }
+*/
+
 const axios = require('axios');
 
 const apps = require('./lib/apps');
@@ -19,18 +33,7 @@ const regex = require('./lib/regex');
 
 module.exports = function(pg) {
 
-  async function do_command(req, res) {
-    /*
-      req.tokens.common_auth_tokens: {
-        access_token, token_type, expires_in, refresh_token, scope
-      }
-
-      req.body: {
-        channel_id, channel_name, command, response_url, team_domain, team_id, text, token,
-        trigger_id, user_id, user_name
-      }
-    */
-
+  async function aka(req, res) {
     // This must be sent regardless of whether or not it was a valid command
     res.status(200).send({
       response_type: 'in_channel',
@@ -61,7 +64,7 @@ module.exports = function(pg) {
       return;
     }
 
-    // Parse command
+    // Parse command (could probably find a library to do this bit)
     const input = req.body.text.trim();
 
     if (regex.allApps.test(input)) {
@@ -84,7 +87,7 @@ module.exports = function(pg) {
   }
 
   return {
-    do_command,
+    aka,
     interact
   }
 }

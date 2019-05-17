@@ -8,7 +8,7 @@ pg.on('error', (e) => console.error(e))
 pg.query(fs.readFileSync('./create.sql').toString('utf8')).catch((err) => console.error(err))
 
 const auth = require('./auth.js')(pg)
-const logic = require('./businesslogic.js')(pg)
+const commands = require('./commands.js')(pg)
 const channels = require('./channels.js')(pg)
 
 const port = process.env.PORT || 9000
@@ -35,7 +35,7 @@ app.use (function(req, res, next) {
 app.get('/teams/:slack_team_id/users/:slack_user_id/login', auth.oauth_start_flow)
 app.get('/auth/callback', auth.oauth_code_callback)
 
-app.post('/aka', auth.slack_validate, logic.do_command)
-app.post('/interact', auth.slack_validate, logic.interact)
+app.post('/aka', auth.slack_validate, commands.aka)
+app.post('/interact', auth.slack_validate, commands.interact)
 
 app.listen(port, () => console.log(`Express is running on ${port}.`))
