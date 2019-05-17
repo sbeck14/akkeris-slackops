@@ -234,8 +234,18 @@ module.exports = function(pg) {
       response_type: 'in_channel',
     });
 
-    // get time zone
-    const { user: { tz, locale } } = await axios.get(`https://slack.com/api/users.info?token=${process.env.BOT_USER_TOKEN}&user=${req.body.user_id}&locale=true`);
+    // get time zone info
+    let userInfo = {};
+    try {
+      userInfo = await axios.get(`https://slack.com/api/users.info?token=${process.env.BOT_USER_TOKEN}&user=${req.body.user_id}&locale=true`);
+      console.log(userInfo);
+    } catch (err) {
+      console.log('Could not fetch user info. Using default locale.');
+      userInfo.user = {
+        tz: 'America/Denver',
+        locale: 'en-us',
+      };
+    }
 
     const meta = {
       channelID: req.body.channel_id,
@@ -243,8 +253,8 @@ module.exports = function(pg) {
       replyTo: req.body.response_url,
       token: req.tokens[0].common_auth_tokens.access_token,
       userName: req.body.user_name,
-      tz,
-      locale,
+      tz: userInfo.user.tz,
+      locale: userInfo.user.locale,
     };
 
     if (!(await isMember(pg, meta.channelID))) {
