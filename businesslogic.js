@@ -12,7 +12,8 @@
  */
 
 const axios = require('axios')
-const FormData = require('form-data');
+const FormData = require('form-data')
+const Fuse = require('fuse.js')
 
 // Regex Matches
 const r_allApps = /^((apps)|(all apps)|(list))$/i;
@@ -93,6 +94,55 @@ async function sendError(replyTo, message) {
   } catch (err) {
     console.error(err);
   }
+}
+
+async function sendAppSuggestions(meta, appName) {
+  // Get all apps
+  const { data: apps } = await axios.get(`${process.env.AKKERIS_API}/apps`, { headers: { 'Authorization': `Bearer ${meta.token}` } });
+
+  // Fuzzy suggest
+  const fuse = new Fuse(apps, { keys: ['name'] });
+  const results = fuse.search(appName);
+
+  if (results.length === 0) {
+    // We have nothing to suggest
+    sendError(meta.replyTo, "Error retrieving app info. Please try again later.");
+    return;
+  }
+
+  const message = [
+    {
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `Did you mean _${results[0].name}_?`
+      }
+    },
+    {
+      type: "actions",
+      elements: [
+        {
+          type: "button",
+          text: {
+            type: "plain_text",
+            text: `Get info for ${results[0].name}`,
+            emoji: false
+          }
+        }
+      ]
+    }
+  ];
+
+  try {
+    await axios.post(meta.replyTo, {
+      "response_type": "in_channel",
+      "blocks": message,
+    });
+  } catch (err) {
+    console.error(err);
+    sendError(meta.replyTo, "Oops! Something went wrong. Please try again later");
+  }
+
 }
 
 async function isMember(pg, channelID) {
@@ -199,6 +249,10 @@ async function getAppInfo(meta, input) {
       "blocks": message,
     })
   } catch (err) {
+    if (err.response.status === 404) {
+      sendAppSuggestions(meta, parse[4]);
+      return;
+    }
     console.error(err);
     sendError(meta.replyTo, "Error retrieving app info. Please try again later.");
   }
@@ -237,8 +291,8 @@ module.exports = function(pg) {
     // get time zone info
     let userinfo = {};
     try {
-      let { user: { tz } } = await axios.get(`https://slack.com/api/users.info?token=${process.env.BOT_USER_TOKEN}&user=${req.body.user_id}`);
-      userinfo.tz = tz;
+      const info = await axios.get(`https://slack.com/api/users.info?token=${process.env.BOT_USER_TOKEN}&user=${req.body.user_id}`);
+      userinfo.tz = info.user.tz;
     } catch (err) {
       console.log('Could not fetch user info. Using default locale.');
       userinfo.tz = 'America/Denver';
