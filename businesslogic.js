@@ -143,7 +143,7 @@ async function getAppInfo(meta, input) {
         if(d.updated_at === '0001-01-01T00:00:00Z') {
           d.updated_at = 'unknown';
         } else {
-          d.updated_at = new Date(d.updated_at).toLocaleString(meta.locale, { timeZone: meta.tz });
+          d.updated_at = new Date(d.updated_at).toLocaleString('en-us', { timeZone: meta.tz });
         }
         return format_dyno(d);
       });
@@ -188,7 +188,7 @@ async function getAppInfo(meta, input) {
         "elements": [
           {
             "type": "mrkdwn",
-            "text": `Last Release: ${new Date(app.released_at).toLocaleString(meta.locale, { timeZone: meta.tz })}\nMore Info: ${ui_url}`
+            "text": `Last Release: ${new Date(app.released_at).toLocaleString('en-us', { timeZone: meta.tz })}\nMore Info: ${ui_url}`
           }
         ]
       }
@@ -235,16 +235,13 @@ module.exports = function(pg) {
     });
 
     // get time zone info
-    let userInfo = {};
+    let userinfo = {};
     try {
-      userInfo = await axios.get(`https://slack.com/api/users.info?token=${process.env.BOT_USER_TOKEN}&user=${req.body.user_id}&locale=true`);
-      console.log(userInfo);
+      let { user: { tz } } = await axios.get(`https://slack.com/api/users.info?token=${process.env.BOT_USER_TOKEN}&user=${req.body.user_id}`);
+      userinfo.tz = tz;
     } catch (err) {
       console.log('Could not fetch user info. Using default locale.');
-      userInfo.user = {
-        tz: 'America/Denver',
-        locale: 'en-us',
-      };
+      userinfo.tz = 'America/Denver';
     }
 
     const meta = {
@@ -253,8 +250,7 @@ module.exports = function(pg) {
       replyTo: req.body.response_url,
       token: req.tokens[0].common_auth_tokens.access_token,
       userName: req.body.user_name,
-      tz: userInfo.user.tz,
-      locale: userInfo.user.locale,
+      tz: userinfo.tz,
     };
 
     if (!(await isMember(pg, meta.channelID))) {
