@@ -10,264 +10,12 @@
  * In the req object passed in req.body has a mapping of key=value pairs from the slack command,
  * in addition it has req.tokens of the users linked oauth2 system response
  */
+const axios = require('axios');
 
-const axios = require('axios')
-const FormData = require('form-data')
-const Fuse = require('fuse.js')
-
-// Regex Matches
-const r_allApps = /^((apps)|(all apps)|(list))$/i;
-const r_appName = /^((apps)|(apps:info))?\s?((\w+)-((\w+-?)+))$/i;
-const r_ps = /^ps(.)*$/i;
-const r_logs = /^logs(.)*$/i;
-
-
-
-// start-failure, stopping, stopped, waiting, pending, starting, probe-failure, running, app-crashed
-function state_map(ps) {
-  switch(ps.state.toLowerCase()) {
-    case 'start-failure':
-      return {
-        "state":"crashed",
-        "warning": true,
-      }
-    case 'app-crashed':
-      return {
-        "state":"crashed", 
-        "warning": true,
-      }
-    case 'waiting':
-      return {
-        "state":"starting",
-      }
-    case 'probe-failure':
-      let started = new Date(Date.parse(ps.created_at))
-      let now = new Date()
-      if((now.getTime() - started.getTime()) > 1000 * 90) {
-        return {
-          "state":"unhealthy", 
-          "warning": true,
-        }
-      } else {
-        return {
-          "state":"starting", 
-        }
-
-      }
-    default:
-      return {
-        "state":ps.state.toLowerCase(),
-      }
-  }
-}
-
-function format_dyno(ps) {
-  let info = state_map(ps)
-  info.dyno_name = `${ps.type}.${ps.name}`;
-  info.spacing  = (info.dyno_name.length > 26) ? "  " : (" ".repeat(28 - (info.dyno_name.length + 2)));
-  info.updated_at = ps.updated_at;
-  return info;
-}
-
-async function uploadFile(channelID, data, filename, filetype, title) {
-  const form = new FormData();
-  form.append('channels', channelID);
-  form.append('content', data);
-  form.append('filename', filename);
-  form.append('filetype', filetype);
-  form.append('title', title)
-  
-  return axios.post('https://slack.com/api/files.upload', form, {
-    headers: {
-      Authorization: `Bearer ${process.env.BOT_USER_TOKEN}`, 
-      ...form.getHeaders(),
-    }
-  });
-}
-
-async function sendError(replyTo, message) {
-  try {
-    await axios.post(replyTo, {
-      "response_type": "ephemeral",
-      "text": message,
-    });
-  } catch (err) {
-    console.error(err);
-  }
-}
-
-async function sendAppSuggestions(meta, appName) {
-  // Get all apps
-  const { data: apps } = await axios.get(`${process.env.AKKERIS_API}/apps`, { headers: { 'Authorization': `Bearer ${meta.token}` } });
-
-  // Fuzzy suggest
-  const fuse = new Fuse(apps, { keys: ['name'] });
-  const results = fuse.search(appName);
-
-  if (results.length === 0) {
-    // We have nothing to suggest
-    sendError(meta.replyTo, "Error retrieving app info. Please try again later.");
-    return;
-  }
-
-  const message = [
-    {
-      type: "section",
-      text: {
-        type: "mrkdwn",
-        text: `Did you mean _${results[0].name}_?`
-      }
-    },
-    {
-      type: "actions",
-      elements: [
-        {
-          type: "button",
-          text: {
-            type: "plain_text",
-            text: `Get info for ${results[0].name}`,
-            emoji: false
-          }
-        }
-      ]
-    }
-  ];
-
-  try {
-    await axios.post(meta.replyTo, {
-      "response_type": "in_channel",
-      "blocks": message,
-    });
-  } catch (err) {
-    console.error(err);
-    sendError(meta.replyTo, "Oops! Something went wrong. Please try again later");
-  }
-
-}
-
-async function isMember(pg, channelID) {
-  const { rows: channels } = await pg.query(`select channel_id, is_member from channels`);
-  return channels.find(c => c.channel_id === channelID).is_member;
-}
-
-async function getApps(meta) {
-  try {
-    const opts = { headers: { 'Authorization': `Bearer ${meta.token}` } };
-    const { data: apps } = await axios.get(`${process.env.AKKERIS_API}/apps`, opts);
-
-    const output = apps.reduce((acc, app) => (
-      `${acc}⬢ ${app.name} ${app.preview ? '- preview' : ''}\n\tUrl: ${app.web_url}\n\t${app.git_url ? ("GitHub: " + app.git_url + ' \n\n') : '\n'}`
-    ), '');
-    
-    const res = await uploadFile(
-      meta.channelID,
-      output,
-      `aka-apps_${Date.now() / 1000}.txt`,
-      'text',
-      `*Result of* \`aka apps\` (${apps.length})`
-    );
-    if (res.data.ok === false) {
-      throw new Error(res.data.error);
-    }
-  } catch (err) {
-    console.error(err);
-    sendError(meta.replyTo, "Error retrieving list of apps. Please try again later.");
-  }
-}
-
-async function getAppInfo(meta, input) {
-  const parse = input.match(r_appName);
-  const appName = parse[4];
-
-  try {
-    const opts = { headers: { 'Authorization': `Bearer ${meta.token}` } };
-    const { data: app } = await axios.get(`${process.env.AKKERIS_API}/apps/${appName}`, opts);
-    const { data: formations } = await axios.get(`${process.env.AKKERIS_API}/apps/${appName}/formation`, opts);
-    const { data: dynos } = await axios.get(`${process.env.AKKERIS_API}/apps/${appName}/dynos`, opts);
-
-    let formation_info = '';
-    let warn = false;
-
-    formations.forEach((f) => {
-      const f_dynos = dynos.filter(x => x.type === f.type).map((d) => {
-        if(d.updated_at === '0001-01-01T00:00:00Z') {
-          d.updated_at = 'unknown';
-        } else {
-          d.updated_at = new Date(d.updated_at).toLocaleString('en-us', { timeZone: meta.tz });
-        }
-        return format_dyno(d);
-      });
-      if (!warn) {
-        warn = f_dynos.some(x => x.warning);
-      }
-      formation_info = `${formation_info}${f.type} [${f.quantity}] (${f.size}): ${warn ? ":warning:" : ''}\n`;
-      f_dynos.forEach(d => {
-        formation_info = `${formation_info}\t- ${d.warning ? ":warning: " : ''}${d.dyno_name}:${d.spacing}${d.state} (${d.updated_at})\n`
-      })
-    });
-
-    const ui_url = `${process.env.AKKERIS_UI}/apps/${appName}/info`;
-
-    const message = [
-      {
-        "type": "section",
-        "text": {
-          "text": `Info for *${appName}*`,
-          "type": "mrkdwn",
-        }
-      },
-      {
-        "type": "section",
-        "text": {
-          "text": `:cpu: *Dynos* ${warn ? ":warning:" : ''}\n${formation_info}`,
-          "type": "mrkdwn",
-        }
-      },
-      {
-        "type": "section",
-        "text": {
-          "text": `:github: *Git Repo*\t${app.git_url}#${app.git_branch}`,
-          "type": "mrkdwn",
-        }
-      },
-      {
-        "type": "divider",
-      },
-      {
-        "type": "context",
-        "elements": [
-          {
-            "type": "mrkdwn",
-            "text": `Last Release: ${new Date(app.released_at).toLocaleString('en-us', { timeZone: meta.tz })}\nMore Info: ${ui_url}`
-          }
-        ]
-      }
-    ]
-
-    await axios.post(meta.replyTo, {
-      "response_type": "in_channel",
-      "blocks": message,
-    })
-  } catch (err) {
-    if (err.response.status === 404) {
-      sendAppSuggestions(meta, parse[4]);
-      return;
-    }
-    console.error(err);
-    sendError(meta.replyTo, "Error retrieving app info. Please try again later.");
-  }
-}
-
-async function psCommand(meta, options) {
-  console.log(`psCommand requested by ${meta.userName}`)
-  sendError(meta.replyTo, `Not implemented. Options: ${options}`);
-}
-
-async function logsCommand(meta, options) {
-  console.log(`logsCommand requested by ${meta.userName}`)
-  sendError(meta.replyTo, `Not implemented. Options: ${options}`);
-}
-
+const apps = require('./lib/apps');
+const logs = require('./lib/logs');
+const common = require('./lib/common');
+const regex = require('./lib/regex');
 
 module.exports = function(pg) {
 
@@ -283,12 +31,12 @@ module.exports = function(pg) {
       }
     */
 
-    // Recieved command, regardless of whether or not it worked
+    // This must be sent regardless of whether or not it was a valid command
     res.status(200).send({
       response_type: 'in_channel',
     });
 
-    // get time zone info
+    // Get user time zone information
     let userinfo = {};
     try {
       const info = await axios.get(`https://slack.com/api/users.info?token=${process.env.BOT_USER_TOKEN}&user=${req.body.user_id}`);
@@ -307,31 +55,31 @@ module.exports = function(pg) {
       tz: userinfo.tz,
     };
 
-    if (!(await isMember(pg, meta.channelID))) {
-      sendError(meta.replyTo, `Please add the bot to the ${meta.channelName} channel.`)
+    // Make sure the bot can send a message to the appropriate channel
+    if (!(await common.isMember(pg, meta.channelID))) {
+      common.sendError(meta.replyTo, `Please add the bot to the ${meta.channelName} channel.`)
       return;
     }
 
+    // Parse command
     const input = req.body.text.trim();
 
-    if (r_allApps.test(input)) {
-      getApps(meta);
-    } else if (r_appName.test(input)) {
-      getAppInfo(meta, input)
-    } else if (r_ps.test(input)) {
-      psCommand(meta, input);
-    } else if (r_logs.test(input)) {
-      logsCommand(meta, input);
+    if (regex.allApps.test(input)) {
+      apps.getApps(meta);
+    } else if (regex.appName.test(input)) {
+      apps.getAppInfo(meta, input)
+    } else if (regex.logs.test(input)) {
+      logs.getLogs(meta, input);
     } else {
-      sendError(meta.replyTo, `Unrecognized Command: ${input}`);
+      common.sendError(meta.replyTo, `Unrecognized Command: ${input}`);
     }
   }
 
+  // Placeholder for user interaction with commands
   async function interact(req, res) {
     res.status(200).send({
       response_type: 'in_channel',
     });
-
     console.log(req.body.payload);
   }
 
